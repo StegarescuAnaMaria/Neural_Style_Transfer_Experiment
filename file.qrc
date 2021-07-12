@@ -1,0 +1,86 @@
+<!DOCTYPE RCC><RCC version="1.0">
+<qresource>
+<file alias="picasso">resources/app/picasso.png</file>
+<file alias="the_scream">resources/app/the_scream.png</file>
+
+
+    <file alias="pen">resources/pencil.png</file>
+    <file alias="eraser">resources/eraser.png</file>
+    <file alias="brush">resources/brush.png</file>
+<file alias="texture">resources/texture.png</file>
+<file alias="line">resources/line.png</file>
+<file alias="cap">resources/cap.png</file>
+<file alias="linewidth">resources/linewidth.png</file>
+<file alias="bucket">resources/bucket.png</file>
+<file alias="bucket_32">resources/bucket_32.png</file>
+<file alias="saveas">resources/saveas.png</file>
+<file alias="save">resources/save.png</file>
+<file alias="save_gray">resources/save_gray.png</file>
+<file alias="join">resources/join.png</file>
+<file alias="rainbow">resources/rainbow.png</file>
+<file alias="spray">resources/spray.png</file>
+<file alias="color">resources/color.png</file>
+<file alias="clearscreen">resources/clearscreen.png</file>
+<file alias="help">resources/help.png</file>
+<file alias="eraserwidth">resources/eraserwidth.png</file>
+<file alias="print">resources/print.png</file>
+<file alias="file">resources/file.png</file>
+<file alias="openfile">resources/openfile.png</file>
+<file alias="exit">resources/exit.png</file>
+<file alias="undo">resources/undo.png</file>
+<file alias="redo">resources/redo.png</file>
+<file alias="undo_gray">resources/undo_gray.png</file>
+<file alias="redo_gray">resources/redo_gray.png</file>
+<file alias="rgb">resources/rgb.png</file>
+<file alias="rgba">resources/rgba.png</file>
+<file alias="rgb_gray">resources/rgb_gray.png</file>
+<file alias="rgba_gray">resources/rgba_gray.png</file>
+<file alias="resize">resources/resize.png</file>
+<file alias="custom_texture">resources/custom_texture.png</file>
+<file alias="texture_size">resources/texture_size.png</file>
+<file alias="export">resources/export.png</file>
+
+<file alias="brush1">resources/textures/brush1.png</file>
+<file alias="brush2">resources/textures/brush2.png</file>
+<file alias="brush3">resources/textures/brush3.png</file>
+<file alias="brush4">resources/textures/brush4.png</file>
+<file alias="brush5">resources/textures/brush5.png</file>
+<file alias="brush6">resources/textures/brush6.png</file>
+<file alias="brush7">resources/textures/brush7.png</file>
+<file alias="brush8">resources/textures/brush8.png</file>
+<file alias="brush9">resources/textures/brush9.png</file>
+<file alias="brush10">resources/textures/brush10.png</file>
+<file alias="brush11">resources/textures/brush11.png</file>
+
+<file alias="Dense1Pattern">resources/patterns/Dense1Pattern.png</file>
+<file alias="Dense2Pattern">resources/patterns/Dense2Pattern.png</file>
+<file alias="Dense3Pattern">resources/patterns/Dense3Pattern.png</file>
+<file alias="Dense4Pattern">resources/patterns/Dense4Pattern.png</file>
+<file alias="Dense5Pattern">resources/patterns/Dense5Pattern.png</file>
+<file alias="Dense6Pattern">resources/patterns/Dense6Pattern.png</file>
+<file alias="Dense7Pattern">resources/patterns/Dense7Pattern.png</file>
+<file alias="HorPattern">resources/patterns/HorPattern.png</file>
+<file alias="VerPattern">resources/patterns/VerPattern.png</file>
+<file alias="CrossPattern">resources/patterns/CrossPattern.png</file>
+<file alias="BDiagPattern">resources/patterns/BDiagPattern.png</file>
+<file alias="FDiagPattern">resources/patterns/FDiagPattern.png</file>
+<file alias="DiagCrossPattern">resources/patterns/DiagCrossPattern.png</file>
+<file alias="LinearGradientPattern">resources/patterns/LinearGradientPattern.png</file>
+<file alias="RadialGradientPattern">resources/patterns/RadialGradientPattern.png</file>
+<file alias="ConicalGradientPattern">resources/patterns/ConicalGradientPattern.png</file>
+
+<file alias="FlatCap">resources/caps/FlatCap.png</file>
+<file alias="RoundCap">resources/caps/RoundCap.png</file>
+<file alias="SquareCap">resources/caps/SquareCap.png</file>
+
+<file alias="BevelJoin">resources/joins/BevelJoin.png</file>
+<file alias="MiterJoin">resources/joins/MiterJoin.png</file>
+<file alias="RoundJoin">resources/joins/RoundJoin.png</file>
+
+<file alias="DashDotDotLine">resources/lines/DashDotDotLine.png</file>
+<file alias="DashDotLine">resources/lines/DashDotLine.png</file>
+<file alias="DashLine">resources/lines/DashLine.png</file>
+<file alias="DotLine">resources/lines/DotLine.png</file>
+<file alias="SolidLine">resources/lines/SolidLine.png</file>
+</qresource>
+</RCC>
