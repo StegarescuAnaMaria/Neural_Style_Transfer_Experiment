@@ -387,8 +387,6 @@ class ScribbleArea(QtWidgets.QWidget):
         self.lastPoint = endPoint
 
 
-
-
     """chemata la salvarea imaginii"""
     def resizeImage(self, image, newSize):
         if image.size() == newSize:
@@ -1005,12 +1003,17 @@ class MainWindow(QtWidgets.QMainWindow):
         self.parent.your_image = QtGui.QPixmap.fromImage(image)
         self.parent.drawed = True
         if self.parent.transfered:
-            self.parent.button_compare.setEnabled(True)
-        self.parent.button_static.setEnabled(True)
-        self.parent.button_abstract.setEnabled(True)
+            self.parent.button_compare_stylized1.setEnabled(True)
+        if self.parent.transfered2:
+            self.parent.button_compare_stylized2.setEnabled(True)
+        #self.parent.button_static.setEnabled(True)
+        #self.parent.button_abstract.setEnabled(True)
         self.parent.button_upload.setEnabled(True)
-        self.parent.label_comparison.setText("Current similarity (from 0 to 10): Empty")
+        self.parent.label_comparison_stylized1.setText("Current similarity (from 0 to 10): Empty")
+        self.parent.label_comparison_stylized2.setText("Current similarity (from 0 to 10): Empty")
         self.parent.your_image_label.setPixmap(QtGui.QPixmap.fromImage(image))
+        self.parent.drawing_time = time.time() - self.parent.drawing_time
+        self.parent.label_drawing_time.setText("Time: {} seconds".format(round(self.parent.drawing_time, 2)))
         self.parent.window.hide()
 
 
@@ -1425,8 +1428,10 @@ class StyleTransferVGG19:
                 p.requires_grad = False
             self.model.to(self.device)
 
-            self.transform = transforms.Compose([transforms.Resize(400), transforms.ToTensor(),
-                                                 transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+            self.transform = transforms.Compose([transforms.Resize(400), transforms.ToTensor()
+                                                 #,transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+                                                 ])
+            self.transform2 = transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
 
 
 
@@ -1435,34 +1440,66 @@ class StyleTransferVGG19:
             self.parent.button_static.setEnabled(False)
             self.parent.button_abstract.setEnabled(False)
             self.parent.label_message.setText("Currently style transfering...You may draw/re-draw/upload an image or begin 2nd style transferring")
+        else:
+            self.parent.label_message.setText(
+                "Currently style transfering...You may draw/re-draw or upload an image")
 
         with tf.device("/GPU:0"):
             self.parent.button_stylize2.setEnabled(False)
+
+            """
+            content = self.parent.load_image(self.parent.static_choice)
+            #_, w, h, _ = content.shape
+            #dim = min(w, h)
+            if len(content.shape) > 3:
+                content = tf.squeeze(content)
+
+            #content = self.parent.process_image(content, dim)
+            content = self.parent.process_image(content, 256)
+            content = tf.transpose(content, perm=[2, 0, 1])
+
+            num = content.numpy()
+            content = torch.from_numpy(num)
+            content = self.transform2(content).to(self.device)
+
+            style = self.parent.load_image(self.parent.abstract_choice)
+            # _, w, h, c = style.shape
+            # dim = min(w, h)
+            if len(style.shape) > 3:
+                style = tf.squeeze(style)
+
+            # style = self.parent.process_image(style, dim)
+            style = self.parent.process_image(style, 256)
+            style = tf.transpose(style, perm=[2, 0, 1])
+
+            num = style.numpy()
+            style = torch.from_numpy(num)
+            style = self.transform2(style).to(self.device)
+
+            """
             content = img.open(self.parent.static_choice).convert("RGB")
             content = self.transform(content).to(self.device)
             style = img.open(self.parent.abstract_choice).convert("RGB")
             style = self.transform(style).to(self.device)
-            _, w, h = content.size()
-            dim = max(w, h)
-            content = self.parent.process_image(content, dim)
+
             target = content.clone().requires_grad_(True).to(self.device)
 
             style_features = self.model_activations(style, self.model)
             content_features = self.model_activations(content, self.model)
             style_wt_meas = {"conv1_1": 2.0, "conv2_1": 1.4, "conv3_1": 0.8, "conv4_1": 0.4, "conv5_1": 0.3}
+            #style_wt_meas = {"conv1_1": 0.4, "conv2_1": 0.3, "conv3_1": 0.2, "conv4_1": 0.2, "conv5_1": 0.2}
             style_grams = {layer: self.gram_matrix(style_features[layer]) for layer in style_features}
 
             content_wt = 1000
             style_wt = 1e8
-            #print_after = 30
-            epochs = 100
+            epochs = 50
             optimizer = torch.optim.Adam([target], lr=0.2)
 
             now = time.time()
             for i in range(1, epochs + 1):
                 target_features = self.model_activations(target, self.model)
                 content_loss = torch.mean((content_features['conv4_2'] - target_features['conv4_2']) ** 2)  # mse
-                # content_loss = torch.mean((content_features['conv3_2'] - target_features['conv3_2'])**2)
+                #content_loss = torch.linalg.norm(content_features['conv4_2'] - target_features['conv4_2'])
 
                 style_loss = 0
                 for layer in style_wt_meas:
@@ -1471,42 +1508,45 @@ class StyleTransferVGG19:
                     _, d, w, h = target_gram.shape
                     target_gram = self.gram_matrix(target_gram)
                     style_loss += (style_wt_meas[layer] * torch.mean((target_gram - style_gram) ** 2)) / d * w * h
-
+                    #style_loss += (style_wt_meas[layer] * torch.linalg.norm(target_gram - style_gram)) / d * w * h
                 total_loss = content_wt * content_loss + style_wt * style_loss
-
-                if i % 100 == 0:
-                    print("epoch ", i, " ", total_loss)
 
                 optimizer.zero_grad()
                 total_loss.backward()
                 optimizer.step()
-                """
-                if i % print_after == 0:
-                    plt.imshow(imcnvt(target), label="Epoch " + str(i))
-                    plt.show()
-                    print(time.time() - now)
-                    plt.imsave(os.path.join(save_path, str(i) + '.png'), imcnvt(target), format='png')
-                """
-            print(time.time()-now)
+            now = time.time() - now
+            self.parent.stylizing_time2 = now
+            self.parent.label_stylizing_time2.setText("Time: {} seconds".format(round(self.parent.stylizing_time2, 2)))
+            print("Time took to style transfer with the old method: {} seconds".format(round(now, 2)))
             self.parent.transfered2 = True
-            print(target.shape)
             target = target.detach().numpy()
             target = np.transpose(target, (1, 2, 0))
             image = self.parent.process_image(target, 256)
             image = tf.keras.preprocessing.image.array_to_img(image)
 
             image.save("stylized_image2.png")
+            self.parent.stylized_image2 = image
             self.parent.stylized_image2_label.setPixmap(QtGui.QPixmap("stylized_image2.png"))
             self.parent.button_static.setEnabled(True)
             self.parent.button_abstract.setEnabled(True)
 
+            if self.parent.drawed:
+                self.parent.button_compare_stylized2.setEnabled(True)
+            if self.parent.transfered:
+                self.parent.button_compare_stylized.setEnabled(True)
 
+            self.parent.label_comparison_stylized.setText("Current similarity (from 0 to 10): Empty")
+            self.parent.label_comparison_stylized2.setText("Current similarity (from 0 to 10): Empty")
+            if self.parent.transfered:
+                self.parent.label_message.setText("")
+
+    """
     def imcnvt(self, image):
         x = image.to("cpu").clone().detach().numpy().squeeze()
         x = x.transpose(1, 2, 0)
         x = x * np.array((0.5, 0.5, 0.5)) + np.array((0.5, 0.5, 0.5))
         return np.clip(x, 0, 1)
-
+    """
 
     def model_activations(self, input, model):
         layers = {
@@ -1545,16 +1585,42 @@ class Widget(QtWidgets.QWidget):
         self.images_static = images_static
         self.images_abstract = images_abstract
 
+        self.drawing_time = None
+        self.stylizing_time1 = None
+        self.stylizing_time2 = None
+
         self.static_image_label = QtWidgets.QLabel()
+        self.static_image_label.setFixedHeight(256)
+        self.static_image_label.setFixedWidth(256)
         self.static_choice = "./static_art/flower10.jpg"
-        self.static_image = QtGui.QPixmap("./static_art/flower10.jpg")
+        content_image = self.load_image(self.static_choice)
+        if len(content_image.shape) > 3:
+            content_image = tf.squeeze(content_image)
+
+        content_image = self.process_image(content_image, 256)
+        content_image = tf.keras.preprocessing.image.array_to_img(content_image)
+        content_image.save("content.png")
+        self.static_image = QtGui.QPixmap("content.png")
+        #self.static_choice = "./static_art/apple10.jpg"
+        #self.static_image = QtGui.QPixmap("./static_art/apple10.jpg")
         self.static_image = self.static_image.scaled(self.size, QtCore.Qt.KeepAspectRatio)
         self.static_image_label.setPixmap(self.static_image)
         self.static_note = QtWidgets.QLabel("Content image")
 
         self.abstract_image_label = QtWidgets.QLabel()
+        self.abstract_image_label.setFixedHeight(256)
+        self.abstract_image_label.setFixedWidth(256)
         self.abstract_choice = "./abstract_art/Ivana Olbright_Desert Roses.jpg"
-        self.abstract_image = QtGui.QPixmap("./abstract_art/Ivana Olbright_Desert Roses.jpg")
+        #self.abstract_choice = "./abstract_art/Angela Dierks_Joy of Being.jpg"
+        abstract_image = self.load_image(self.abstract_choice)
+        if len(abstract_image.shape) > 3:
+            abstract_image = tf.squeeze(abstract_image)
+
+        abstract_image = self.process_image(abstract_image, 256)
+        abstract_image = tf.keras.preprocessing.image.array_to_img(abstract_image)
+        abstract_image.save("style.png")
+        self.abstract_image = QtGui.QPixmap("style.png")
+        #self.abstract_image = QtGui.QPixmap("./abstract_art/Angela Dierks_Joy of Being.jpg")
         self.abstract_image = self.abstract_image.scaled(self.size, QtCore.Qt.KeepAspectRatio)
         self.abstract_image_label.setPixmap(self.abstract_image)
         self.abstract_note = QtWidgets.QLabel("Style image")
@@ -1564,6 +1630,8 @@ class Widget(QtWidgets.QWidget):
 
         self.your_image = QtGui.QPixmap.fromImage(self.your_image)
         self.your_image_label = QtWidgets.QLabel()
+        self.your_image_label.setFixedHeight(256)
+        self.your_image_label.setFixedWidth(256)
         self.your_image_label.setPixmap(self.your_image)
         self.your_image_note = QtWidgets.QLabel("User style transfer")
 
@@ -1575,19 +1643,23 @@ class Widget(QtWidgets.QWidget):
         self.button_upload.clicked.connect(self.upload)
         self.button_upload.resize(100, 50)
 
-        self.stylized_image = QtGui.QImage(256, 256, QtGui.QImage.Format_RGB32)
-        self.stylized_image.fill(QtGui.QColor(255, 255, 255))
-        self.stylized_image = QtGui.QPixmap.fromImage(self.stylized_image)
-        self.stylized_image_label = QtWidgets.QLabel()
-        self.stylized_image_label.setPixmap(self.stylized_image)
-        self.stylized_note = QtWidgets.QLabel("AI style transfer1")
+        self.stylized_image1 = QtGui.QImage(256, 256, QtGui.QImage.Format_RGB32)
+        self.stylized_image1.fill(QtGui.QColor(255, 255, 255))
+        self.stylized_image1 = QtGui.QPixmap.fromImage(self.stylized_image1)
+        self.stylized_image1_label = QtWidgets.QLabel()
+        self.stylized_image1_label.setFixedHeight(256)
+        self.stylized_image1_label.setFixedWidth(256)
+        self.stylized_image1_label.setPixmap(self.stylized_image1)
+        self.stylized_note1 = QtWidgets.QLabel("AI style transfer by new method")
 
         self.stylized_image2 = QtGui.QImage(256, 256, QtGui.QImage.Format_RGB32)
         self.stylized_image2.fill(QtGui.QColor(255, 255, 255))
         self.stylized_image2 = QtGui.QPixmap.fromImage(self.stylized_image2)
         self.stylized_image2_label = QtWidgets.QLabel()
+        self.stylized_image2_label.setFixedHeight(256)
+        self.stylized_image2_label.setFixedWidth(256)
         self.stylized_image2_label.setPixmap(self.stylized_image2)
-        self.stylized_note = QtWidgets.QLabel("AI style transfer2")
+        self.stylized_note2 = QtWidgets.QLabel("AI style transfer by old method")
 
         self.button_stylize = QtWidgets.QPushButton("Begin image style transfer...", self)
         self.button_stylize.clicked.connect(self.style_transfer_aux)
@@ -1598,20 +1670,27 @@ class Widget(QtWidgets.QWidget):
         self.button_stylize2.resize(100, 50)
 
         self.layout0 = QtWidgets.QHBoxLayout()
-        self.static_note.resize(30, 5)
-        self.abstract_note.resize(30, 5)
-        self.your_image_note.resize(30, 5)
-        self.stylized_note.resize(30, 5)
+        self.static_note.setFixedHeight(20)
+        self.static_note.setStyleSheet(" font-size: 13px; margin: 0 auto; text-align: center;")
+        self.abstract_note.setFixedHeight(20)
+        self.abstract_note.setStyleSheet(" font-size: 13px; margin: 0 auto; text-align: center;")
+        self.your_image_note.setFixedHeight(20)
+        self.your_image_note.setStyleSheet(" font-size: 13px; margin: 0 auto; text-align: center;")
+        self.stylized_note1.setFixedHeight(20)
+        self.stylized_note1.setStyleSheet(" font-size: 13px; margin: 0 auto; text-align: center;")
+        self.stylized_note2.setFixedHeight(20)
+        self.stylized_note2.setStyleSheet(" font-size: 13px; margin: 0 auto; text-align: center;")
         self.layout0.addWidget(self.static_note)
         self.layout0.addWidget(self.abstract_note)
         self.layout0.addWidget(self.your_image_note)
-        self.layout0.addWidget(self.stylized_note)
+        self.layout0.addWidget(self.stylized_note1)
+        self.layout0.addWidget(self.stylized_note2)
 
         self.layout1 = QtWidgets.QHBoxLayout()
         self.layout1.addWidget(self.static_image_label)
         self.layout1.addWidget(self.abstract_image_label)
         self.layout1.addWidget(self.your_image_label)
-        self.layout1.addWidget(self.stylized_image_label)
+        self.layout1.addWidget(self.stylized_image1_label)
         self.layout1.addWidget(self.stylized_image2_label)
 
         self.layout2 = QtWidgets.QVBoxLayout()
@@ -1625,25 +1704,75 @@ class Widget(QtWidgets.QWidget):
         self.layout3.addWidget(self.button_stylize)
         self.layout3.addWidget(self.button_stylize2)
 
+        self.layout7 = QtWidgets.QHBoxLayout()
+        label_empty1 = QtWidgets.QLabel("")
+        label_empty2 = QtWidgets.QLabel("")
+        self.label_drawing_time = QtWidgets.QLabel("")
+        self.label_stylizing_time1 = QtWidgets.QLabel("")
+        self.label_stylizing_time2 = QtWidgets.QLabel("")
+        label_empty1.setStyleSheet(" font-size: 13px;")
+        label_empty1.setFixedHeight(20)
+        label_empty2.setStyleSheet(" font-size: 13px;")
+        label_empty2.setFixedHeight(20)
+        self.label_drawing_time.setStyleSheet(" font-size: 13px; text-align: center;")
+        self.label_drawing_time.setFixedHeight(20)
+        self.label_stylizing_time1.setStyleSheet(" font-size: 13px; text-align: center;")
+        self.label_stylizing_time1.setFixedHeight(20)
+        self.label_stylizing_time2.setStyleSheet(" font-size: 13px; text-align: center;")
+        self.label_stylizing_time2.setFixedHeight(20)
+        self.layout7.addWidget(label_empty1)
+        self.layout7.addWidget(label_empty2)
+        self.layout7.addWidget(self.label_drawing_time)
+        self.layout7.addWidget(self.label_stylizing_time1)
+        self.layout7.addWidget(self.label_stylizing_time2)
+
         self.label_message = QtWidgets.QLabel()
         self.label_message.setStyleSheet(" font-size: 16px;")
         self.label_message.setFixedHeight(50)
         self.layout4 = QtWidgets.QVBoxLayout()
-        self.button_compare = QtWidgets.QPushButton("Begin image comparison...", self)
-        self.button_compare.clicked.connect(self.compare)
-        self.button_compare.setEnabled(False)
-        self.label_comparison = QtWidgets.QLabel("Current similarity (from 0 to 10): Empty")
-        self.label_comparison.setFixedHeight(50)
-        self.label_comparison.setStyleSheet(" font-size: 16px;")
+
+        self.button_compare_stylized = QtWidgets.QPushButton("Compare stylized images...", self)
+        self.button_compare_stylized.clicked.connect(lambda ch, x="stylized1 stylized2": self.compare(x))
+        self.button_compare_stylized.setEnabled(False)
+
+        self.button_compare_stylized1 = QtWidgets.QPushButton("Compare stylized image 1 (new method) with the drawing...", self)
+        self.button_compare_stylized1.clicked.connect(lambda ch, x="stylized1 drawing": self.compare(x))
+        self.button_compare_stylized1.setEnabled(False)
+
+        self.button_compare_stylized2 = QtWidgets.QPushButton("Compare stylized image 2 (old method) with the drawing...", self)
+        self.button_compare_stylized2.clicked.connect(lambda ch, x="stylized2 drawing": self.compare(x))
+        self.button_compare_stylized2.setEnabled(False)
+
+        self.label_comparison_stylized = QtWidgets.QLabel("Current similarity (from 0 to 10): Empty")
+        self.label_comparison_stylized.setFixedHeight(50)
+        self.label_comparison_stylized.setStyleSheet(" font-size: 14px; text-align: center;")
+
+        self.label_comparison_stylized1 = QtWidgets.QLabel("Current similarity (from 0 to 10): Empty")
+        self.label_comparison_stylized1.setFixedHeight(50)
+        self.label_comparison_stylized1.setStyleSheet(" font-size: 14px; text-align: center;")
+
+        self.label_comparison_stylized2 = QtWidgets.QLabel("Current similarity (from 0 to 10): Empty")
+        self.label_comparison_stylized2.setFixedHeight(50)
+        self.label_comparison_stylized2.setStyleSheet(" font-size: 14px; text-align: center;")
+
+        self.layout6 = QtWidgets.QHBoxLayout()
+        self.layout6.addWidget(self.label_comparison_stylized1)
+        self.layout6.addWidget(self.label_comparison_stylized2)
+        self.layout6.addWidget(self.label_comparison_stylized)
 
         self.label_name = QtWidgets.QLabel("Author and name of the abstract art image: Ivana Olbright - Desert Roses")
         self.label_name.setFixedHeight(50)
         self.label_name.setStyleSheet(" font-size: 16px;")
 
+        self.layout5 = QtWidgets.QHBoxLayout()
+        self.layout5.addWidget(self.button_compare_stylized1)
+        self.layout5.addWidget(self.button_compare_stylized2)
+        self.layout5.addWidget(self.button_compare_stylized)
+
         self.layout4.addWidget(self.label_message)
         self.layout4.addWidget(self.label_name)
-        self.layout4.addWidget(self.label_comparison)
-        self.layout4.addWidget(self.button_compare)
+        self.layout4.addLayout(self.layout6)
+        self.layout4.addLayout(self.layout5)
 
         self.drawed = False
         self.transfered = False
@@ -1652,8 +1781,10 @@ class Widget(QtWidgets.QWidget):
         checkpoint = tf.train.Checkpoint(self.compare_model)
         checkpoint.restore("./check1/cp.ckpt")
         self.layout = QtWidgets.QVBoxLayout()
+        self.layout.addLayout(self.layout0)
         self.layout.addLayout(self.layout1)
         self.layout.addLayout(self.layout3)
+        self.layout.addLayout(self.layout7)
         self.layout.addLayout(self.layout4)
         self.setLayout(self.layout)
         self.button_static.clicked.connect(self.changeStatic)
@@ -1665,15 +1796,28 @@ class Widget(QtWidgets.QWidget):
     def changeStatic(self):
         img_choice = choice(self.images_static)
         self.static_choice = img_choice
-        image = QtGui.QPixmap(img_choice)
+        content_image = self.load_image(img_choice)
+        if len(content_image.shape) > 3:
+            content_image = tf.squeeze(content_image)
+
+        content_image = self.process_image(content_image, 256)
+        content_image = tf.keras.preprocessing.image.array_to_img(content_image)
+        content_image.save("content.png")
+        #self.static_image = QtGui.QPixmap("content.png")
+        image = QtGui.QPixmap("content.png")
         image = image.scaled(self.size, QtCore.Qt.KeepAspectRatio)
         self.static_image_label.setPixmap(image)
         self.button_stylize.setEnabled(True)
+        self.button_stylize2.setEnabled(True)
         self.drawed = False
         self.transfered = False
         self.transfered2 = False
-        self.button_compare.setEnabled(False)
-        self.label_comparison.setText("Current similarity (from 0 to 10): Empty")
+        self.button_compare_stylized.setEnabled(False)
+        self.button_compare_stylized1.setEnabled(False)
+        self.button_compare_stylized2.setEnabled(False)
+        self.label_comparison_stylized.setText("Current similarity (from 0 to 10): Empty")
+        self.label_comparison_stylized1.setText("Current similarity (from 0 to 10): Empty")
+        self.label_comparison_stylized2.setText("Current similarity (from 0 to 10): Empty")
 
 
     def changeAbstract(self):
@@ -1692,55 +1836,89 @@ class Widget(QtWidgets.QWidget):
             i += 1
             name += c
         self.abstract_choice = os.path.join("./abstract_art", img_choice)
-        image = QtGui.QPixmap(self.abstract_choice)
+        abstract_image = self.load_image(self.abstract_choice)
+        if len(abstract_image.shape) > 3:
+            abstract_image = tf.squeeze(abstract_image)
+
+        abstract_image = self.process_image(abstract_image, 256)
+        abstract_image = tf.keras.preprocessing.image.array_to_img(abstract_image)
+        abstract_image.save("style.png")
+        image = QtGui.QPixmap("style.png")
         image = image.scaled(self.size, QtCore.Qt.KeepAspectRatio)
         self.abstract_image_label.setPixmap(image)
         self.button_stylize.setEnabled(True)
+        self.button_stylize2.setEnabled(True)
         self.drawed = False
         self.transfered = False
         self.transfered2 = False
-        self.button_compare.setEnabled(False)
+        self.button_compare_stylized.setEnabled(False)
+        self.button_compare_stylized1.setEnabled(False)
+        self.button_compare_stylized2.setEnabled(False)
         self.label_name.setText("Author and name of the abstract art image: " + author + " - " + name)
-        self.label_comparison.setText("Current similarity (from 0 to 10): Empty")
+        self.label_comparison_stylized.setText("Current similarity (from 0 to 10): Empty")
+        self.label_comparison_stylized1.setText("Current similarity (from 0 to 10): Empty")
+        self.label_comparison_stylized2.setText("Current similarity (from 0 to 10): Empty")
 
 
-    def compare(self):
-        self.button_compare.setEnabled(False)
-        self.your_image.save("my_drawing.png")
-        your_drawing = img.open("my_drawing.png")
-        your_drawing_np = np.array(your_drawing)
-        stylized_image = img.open("stylized_image.png")
-        stylized_image_np = np.array(stylized_image)
+    def compare(self, subjects="stylized1 drawing"):
+        if subjects == "stylized1 drawing":
+            self.button_compare_stylized1.setEnabled(False)
+            self.your_image.save("my_drawing.png")
+            self.stylized_image1.save("stylized_image1.png")
+            img1 = img.open("my_drawing.png")
+            img2 = img.open("stylized_image1.png")
+        elif subjects == "stylized2 drawing":
+            self.button_compare_stylized2.setEnabled(False)
+            self.your_image.save("my_drawing.png")
+            self.stylized_image2.save("stylized_image2.png")
+            img1 = img.open("my_drawing.png")
+            img2 = img.open("stylized_image2.png")
+        else:
+            self.button_compare_stylized.setEnabled(False)
+            self.stylized_image1.save("stylized_image1.png")
+            self.stylized_image2.save("stylized_image2.png")
+            img1 = img.open("stylized_image1.png")
+            img2 = img.open("stylized_image2.png")
 
-        your_drawing_rgb = self.process_image(tf.convert_to_tensor(your_drawing_np), 256)
-        stylized_image_rgb = self.process_image(tf.convert_to_tensor(stylized_image_np), 256)
+        img1_np = np.array(img1)
+        img2_np = np.array(img2)
 
-        your_drawing = your_drawing_rgb.numpy()
-        stylized_image = stylized_image_rgb.numpy()
+        img1_rgb = self.process_image(tf.convert_to_tensor(img1_np), 256)
+        img2_rgb = self.process_image(tf.convert_to_tensor(img2_np), 256)
+
+        img1 = img1_rgb.numpy()
+        img2 = img2_rgb.numpy()
 
         alpha_channels = np.empty((256, 256, 1))
         alpha_channels.fill(255)
 
-        if your_drawing.shape[-1] == 3:
-            your_drawing = np.concatenate((your_drawing, alpha_channels), axis=2)
+        if img1.shape[-1] == 3:
+            img1 = np.concatenate((img1, alpha_channels), axis=2)
 
-        if stylized_image.shape[-1] == 3:
-            stylized_image = np.concatenate((stylized_image, alpha_channels), axis=2)
+        if img2.shape[-1] == 3:
+            img2 = np.concatenate((img2, alpha_channels), axis=2)
 
-        your_drawing = np.expand_dims(your_drawing, axis=0)
-        stylized_image = np.expand_dims(stylized_image, axis=0)
+        img1 = np.expand_dims(img1, axis=0)
+        img2 = np.expand_dims(img2, axis=0)
 
-        your_drawing = tf.cast(your_drawing, tf.float32) / 255.
-        stylized_image = tf.cast(stylized_image, tf.float32) / 255.
+        img1 = tf.cast(img1, tf.float32) / 255.
+        img2 = tf.cast(img2, tf.float32) / 255.
 
-        your_drawing_info = self.compare_model(your_drawing)
-        stylized_image_info = self.compare_model(stylized_image)
+        img1_info = self.compare_model(img1)
+        img2_info = self.compare_model(img2)
 
-        sim = self.similarity(your_drawing_info, stylized_image_info)
+        sim = self.similarity(img1_info, img2_info)
         sim = sim/512 * 10
-        self.label_comparison.setText("Current similarity (from 0 to 10): "+str(round(sim, 2)))
-        self.button_static.setEnabled(True)
-        self.button_abstract.setEnabled(True)
+
+        text = "Current similarity (from 0 to 10): {}".format(round(sim, 2))
+        if subjects == "stylized1 drawing":
+            self.label_comparison_stylized1.setText(text)
+        elif subjects == "stylized2 drawing":
+            self.label_comparison_stylized2.setText(text)
+        else:
+            self.label_comparison_stylized.setText(text)
+        #self.button_static.setEnabled(True)
+        #self.button_abstract.setEnabled(True)
 
 
 
@@ -1759,6 +1937,7 @@ class Widget(QtWidgets.QWidget):
         self.button_abstract.setEnabled(False)
         self.button_stylize.setEnabled(False)
         self.window = MainWindow(self)
+        self.drawing_time = time.time()
         self.window.show()
         if not self.transfered:
             x = threading.Thread(target=self.style_transfer, args=())
@@ -1815,17 +1994,25 @@ class Widget(QtWidgets.QWidget):
         if len(stylized_image.shape) > 3:
             stylized_image = tf.squeeze(stylized_image, axis=0)
         image = tf.keras.preprocessing.image.array_to_img(stylized_image)
-        image.save("stylized_image.png")
-        self.stylized_image_label.setPixmap(QtGui.QPixmap("stylized_image.png"))
+        image.save("stylized_image1.png")
+        self.stylized_image1 = image
+        self.stylized_image1_label.setPixmap(QtGui.QPixmap("stylized_image1.png"))
         now = time.time() - now
-        print("Time took to style transfer with the new method: " + str(now) + " seconds")
-        self.label_comparison.setText("Current similarity (from 0 to 10): Empty")
-        self.label_message.setText("")
+        self.stylizing_time1 = now
+        self.label_stylizing_time1.setText("Time: {} seconds".format(round(self.stylizing_time1, 2)))
+        print("Time took to style transfer with the new method: {} seconds".format(round(now, 2)))
+        self.label_comparison_stylized.setText("Current similarity (from 0 to 10): Empty")
+        self.label_comparison_stylized1.setText("Current similarity (from 0 to 10): Empty")
+        if self.transfered2:
+            self.label_message.setText("")
         self.transfered = True
         if self.drawed:
-            self.button_compare.setEnabled(True)
+            self.button_compare_stylized1.setEnabled(True)
+        if self.transfered2:
+            self.button_compare_stylized.setEnabled(True)
         self.button_static.setEnabled(True)
         self.button_abstract.setEnabled(True)
+        self.transfered = True
         if thread is not None:
             threading.currentThread().join()
 
@@ -1869,6 +2056,7 @@ class Widget(QtWidgets.QWidget):
         img = tf.io.decode_image(img, channels=3)
         img = tf.image.convert_image_dtype(img, tf.float32)
         img = img[tf.newaxis, :]
+        #print(img)
         return img
 
 
@@ -1914,8 +2102,11 @@ class Widget(QtWidgets.QWidget):
         self.button_abstract.setEnabled(True)
         self.drawed = True
         if self.transfered:
-            self.button_compare.setEnabled(True)
-        self.label_comparison.setText("Current similarity (from 0 to 10): Empty")
+            self.button_compare_stylized1.setEnabled(True)
+        if self.transfered2:
+            self.button_compare_stylized2.setEnabled(True)
+        self.label_comparison_stylized1.setText("Current similarity (from 0 to 10): Empty")
+        self.label_comparison_stylized2.setText("Current similarity (from 0 to 10): Empty")
 
 
 class App(QtWidgets.QMainWindow):
