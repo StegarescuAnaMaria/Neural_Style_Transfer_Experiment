@@ -25,11 +25,19 @@ So the difference between the classic method and the new approach is that before
    ![](pictures/image1.png)
 	
    There is also a button for the image style transfer that starts the process. I left the button enabled from the start in case the user is curious about the result of the NST models. However, the process may take around 100-140 seconds (from my experiments), so while the user is busy drawing the picture, the style transfer process will start automatically on a 2nd thread. 
+   
 ![](pictures/image3.png)
 
    The last step will be the comparison between the picture the user drew or uploaded, and the NST result following both approaches. 
+   
   ![](pictures/image4.png)
   
+I have created my own dataset of static images and abstract paintings, it can be downloaded [here](https://www.kaggle.com/anamariastegarescu/neural-style-transfer-dataset).
+
+![](pictures/image7.png)
+
 The icons used in the app are from https://icons8.com/.
 
 The images used for the customized brush textures are from https://www.cleanpng.com/.
+
+The abstract images are from https://theartling.com/en/art/abstract/.
