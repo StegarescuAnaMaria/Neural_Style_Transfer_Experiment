@@ -41,3 +41,5 @@ The icons used in the app are from https://icons8.com/.
 The images used for the customized brush textures are from https://www.cleanpng.com/.
 
 The abstract images are from https://theartling.com/en/art/abstract/.
+
+The static images are from Google Images.
