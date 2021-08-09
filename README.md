@@ -16,6 +16,7 @@ So the difference between the classic method and the new approach is that before
 	![](pictures/autoencoder.png)
    I made the graphical user interface with PyQt5. After the user picks a content image and a style image randomly, they can either upload their own image, or choose to draw a picture with the said content and style. Upon clicking the “Start to draw” button, a new window will appear with a drawing app. For this one, I designed my own brush textures to resemble the different kinds of paint used in the abstract art picked by me. 
    Here are 2 examples of the brush textures. Their color changes by user's liking.
+   ![](pictures/image6.png)
    ![](pictures/image1.png)
 	
    There is also a button for the image style transfer that starts the process. I left the button enabled from the start in case the user is curious about the result of the NST models. However, the process may take around 100-140 seconds (from my experiments), so while the user is busy drawing the picture, the style transfer process will start automatically on a 2nd thread. 
