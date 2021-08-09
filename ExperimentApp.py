@@ -24,18 +24,12 @@ from tensorflow.keras.models import Model
 from tensorflow.keras import layers, losses
 
 from argparse import ArgumentParser
-"""
-parser = ArgumentParser(description='Example')
-parser.add_argument('–gpu', type=int, default=[0,1], nargs='+', help='used gpu')
 
-args = parser.parse_args()
-os.environ["CUDA_VISIBLE_DEVICES"] = ','.join(str(x) for x in args.gpu)
-"""
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = '0'
 
 dev = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-print(dev)
+
 
 def texture_func(size):
     path_text = "./resources/textures"
