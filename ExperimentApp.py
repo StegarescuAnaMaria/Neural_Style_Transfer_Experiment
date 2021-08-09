@@ -288,24 +288,6 @@ class ScribbleArea(QtWidgets.QWidget):
 
 
     def resizeEvent(self, event):
-        """
-        if self.format == self.rgb:
-            print("here")
-            self.undoAct.setEnabled(True)
-            self.undoAct.setIcon(self.undoIcon)
-        if self.undo_pos != -1:
-            self.undo_images = self.undo_images[:self.undo_pos + 1]
-            self.undo_pos = -1
-            if self.format == self.rgb:
-                self.redoAct.setEnabled(False)
-                self.redoAct.setIcon(self.redoGrayIcon)
-
-        if self.width > self.image.width() or self.height > self.image.height():
-            newWidth = max(self.width + 128, self.width)
-            newHeight = max(self.height + 128, self.height)
-            self.image = self.resizeImage(self.image, QtCore.QSize(newWidth, newHeight))
-            self.update()
-            """
         QtWidgets.QWidget.resizeEvent(self, event)
         self.width = self.image.width()
         self.height = self.image.height()
@@ -558,8 +540,6 @@ class MainWindow(QtWidgets.QMainWindow):
 
 
     def closeEvent(self, event):
-        #self.parent.button_static.setEnabled(True)
-        #self.parent.button_abstract.setEnabled(True)
         self.parent.button_upload.setEnabled(True)
         if self.maybeSave():
             event.accept()
@@ -1006,8 +986,6 @@ class MainWindow(QtWidgets.QMainWindow):
             self.parent.button_compare_stylized1.setEnabled(True)
         if self.parent.transfered2:
             self.parent.button_compare_stylized2.setEnabled(True)
-        #self.parent.button_static.setEnabled(True)
-        #self.parent.button_abstract.setEnabled(True)
         self.parent.button_upload.setEnabled(True)
         self.parent.label_comparison_stylized1.setText("Current similarity (from 0 to 10): Empty")
         self.parent.label_comparison_stylized2.setText("Current similarity (from 0 to 10): Empty")
@@ -1447,36 +1425,6 @@ class StyleTransferVGG19:
         with tf.device("/GPU:0"):
             self.parent.button_stylize2.setEnabled(False)
 
-            """
-            content = self.parent.load_image(self.parent.static_choice)
-            #_, w, h, _ = content.shape
-            #dim = min(w, h)
-            if len(content.shape) > 3:
-                content = tf.squeeze(content)
-
-            #content = self.parent.process_image(content, dim)
-            content = self.parent.process_image(content, 256)
-            content = tf.transpose(content, perm=[2, 0, 1])
-
-            num = content.numpy()
-            content = torch.from_numpy(num)
-            content = self.transform2(content).to(self.device)
-
-            style = self.parent.load_image(self.parent.abstract_choice)
-            # _, w, h, c = style.shape
-            # dim = min(w, h)
-            if len(style.shape) > 3:
-                style = tf.squeeze(style)
-
-            # style = self.parent.process_image(style, dim)
-            style = self.parent.process_image(style, 256)
-            style = tf.transpose(style, perm=[2, 0, 1])
-
-            num = style.numpy()
-            style = torch.from_numpy(num)
-            style = self.transform2(style).to(self.device)
-
-            """
             content = img.open(self.parent.static_choice).convert("RGB")
             content = self.transform(content).to(self.device)
             style = img.open(self.parent.abstract_choice).convert("RGB")
@@ -1499,7 +1447,6 @@ class StyleTransferVGG19:
             for i in range(1, epochs + 1):
                 target_features = self.model_activations(target, self.model)
                 content_loss = torch.mean((content_features['conv4_2'] - target_features['conv4_2']) ** 2)  # mse
-                #content_loss = torch.linalg.norm(content_features['conv4_2'] - target_features['conv4_2'])
 
                 style_loss = 0
                 for layer in style_wt_meas:
@@ -1508,7 +1455,6 @@ class StyleTransferVGG19:
                     _, d, w, h = target_gram.shape
                     target_gram = self.gram_matrix(target_gram)
                     style_loss += (style_wt_meas[layer] * torch.mean((target_gram - style_gram) ** 2)) / d * w * h
-                    #style_loss += (style_wt_meas[layer] * torch.linalg.norm(target_gram - style_gram)) / d * w * h
                 total_loss = content_wt * content_loss + style_wt * style_loss
 
                 optimizer.zero_grad()
@@ -1540,13 +1486,7 @@ class StyleTransferVGG19:
             if self.parent.transfered:
                 self.parent.label_message.setText("")
 
-    """
-    def imcnvt(self, image):
-        x = image.to("cpu").clone().detach().numpy().squeeze()
-        x = x.transpose(1, 2, 0)
-        x = x * np.array((0.5, 0.5, 0.5)) + np.array((0.5, 0.5, 0.5))
-        return np.clip(x, 0, 1)
-    """
+
 
     def model_activations(self, input, model):
         layers = {
@@ -1601,8 +1541,6 @@ class Widget(QtWidgets.QWidget):
         content_image = tf.keras.preprocessing.image.array_to_img(content_image)
         content_image.save("content.png")
         self.static_image = QtGui.QPixmap("content.png")
-        #self.static_choice = "./static_art/apple10.jpg"
-        #self.static_image = QtGui.QPixmap("./static_art/apple10.jpg")
         self.static_image = self.static_image.scaled(self.size, QtCore.Qt.KeepAspectRatio)
         self.static_image_label.setPixmap(self.static_image)
         self.static_note = QtWidgets.QLabel("Content image")
@@ -1611,7 +1549,6 @@ class Widget(QtWidgets.QWidget):
         self.abstract_image_label.setFixedHeight(256)
         self.abstract_image_label.setFixedWidth(256)
         self.abstract_choice = "./abstract_art/Ivana Olbright_Desert Roses.jpg"
-        #self.abstract_choice = "./abstract_art/Angela Dierks_Joy of Being.jpg"
         abstract_image = self.load_image(self.abstract_choice)
         if len(abstract_image.shape) > 3:
             abstract_image = tf.squeeze(abstract_image)
@@ -1620,7 +1557,6 @@ class Widget(QtWidgets.QWidget):
         abstract_image = tf.keras.preprocessing.image.array_to_img(abstract_image)
         abstract_image.save("style.png")
         self.abstract_image = QtGui.QPixmap("style.png")
-        #self.abstract_image = QtGui.QPixmap("./abstract_art/Angela Dierks_Joy of Being.jpg")
         self.abstract_image = self.abstract_image.scaled(self.size, QtCore.Qt.KeepAspectRatio)
         self.abstract_image_label.setPixmap(self.abstract_image)
         self.abstract_note = QtWidgets.QLabel("Style image")
@@ -1803,7 +1739,6 @@ class Widget(QtWidgets.QWidget):
         content_image = self.process_image(content_image, 256)
         content_image = tf.keras.preprocessing.image.array_to_img(content_image)
         content_image.save("content.png")
-        #self.static_image = QtGui.QPixmap("content.png")
         image = QtGui.QPixmap("content.png")
         image = image.scaled(self.size, QtCore.Qt.KeepAspectRatio)
         self.static_image_label.setPixmap(image)
@@ -1917,8 +1852,6 @@ class Widget(QtWidgets.QWidget):
             self.label_comparison_stylized2.setText(text)
         else:
             self.label_comparison_stylized.setText(text)
-        #self.button_static.setEnabled(True)
-        #self.button_abstract.setEnabled(True)
 
 
 
@@ -1943,10 +1876,8 @@ class Widget(QtWidgets.QWidget):
             x = threading.Thread(target=self.style_transfer, args=())
             x.start()
         if not self.transfered2:
-            #torch.device("cuda")
             with tf.device("/GPU:0"):
                 y = threading.Thread(target=self.vgg19.stylize, args=("drawing",))
-                #y.device =
                 y.start()
 
 
@@ -1962,7 +1893,6 @@ class Widget(QtWidgets.QWidget):
 
 
     def style_transfer(self, thread=None):
-        #if self.drawed:
         self.button_static.setEnabled(False)
         self.button_abstract.setEnabled(False)
         self.button_stylize.setEnabled(False)
@@ -2056,7 +1986,6 @@ class Widget(QtWidgets.QWidget):
         img = tf.io.decode_image(img, channels=3)
         img = tf.image.convert_image_dtype(img, tf.float32)
         img = img[tf.newaxis, :]
-        #print(img)
         return img
 
 
@@ -2112,14 +2041,11 @@ class Widget(QtWidgets.QWidget):
 class App(QtWidgets.QMainWindow):
     def __init__(self):
         super().__init__()
-        #window = MainWindow()
         self.setWindowTitle(self.tr("Style Transfer Experiment"))
         self.setWindowIcon(QtGui.QIcon(':the_scream'))
         static_art = os.listdir("./static_art")
-        #abstract_art = os.listdir("./abstract_art")
         self.static_images = [os.path.join("./static_art", e) for e in static_art]
         self.abstract_images = os.listdir("./abstract_art")
-            #[os.path.join("./abstract_art", e) for e in abstract_art]
         self.image_widget = Widget(self.static_images, self.abstract_images)
         self.setCentralWidget(self.image_widget)
 
